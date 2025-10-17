@@ -8,4 +8,59 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+enum Role{
+  ADMIN
+  TECH
+  CONSULTA
+}
+enum AssetsStatus{
+  AVAILABLE
+  IN_USE
+  MAINTENENCE
+  LOANED
+}
+enum EventType{
+  MOVE
+  STATUS_CHANGE
+  CHECKIN
+  CHECKOUT
+  OTHER
+}
+enum MaintenanceStatus{
+  OPEN
+  IN_PROGRESS
+  CLOSED
+}
+
+model User{
+  id Int @id @default(autoincrement())
+  nome String
+  senha String
+  email String @unique
+  role Role @default(CONSULTA)
+  events AssetEvent[]                  
+  createdAt DateTime @default(now())
+  updateAt DateTime @updateAt               
+}
+model Lab{
+  idLab Int @id @default(autoincrement())
+  nameLab String @unique
+  localLab String
+  createdAt DateTime @default(now())
+  updateAt DateTime @updateAt
+}
+model Assets{
+  idAssets Int @id @default(autoincrement())
+  idLocal
+  local
+  idLab
+  lab
+  modelo String
+  patrimonio Int @unique
+  categoria
+  serial
+}
+model Location{
+  idLocal
+}
 
