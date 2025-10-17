@@ -38,29 +38,37 @@ model User{
   senha String
   email String @unique
   role Role @default(CONSULTA)
-  events AssetEvent[]                  
+  events AssetsEvent[]                  
   createdAt DateTime @default(now())
   updateAt DateTime @updateAt               
 }
 model Lab{
   idLab Int @id @default(autoincrement())
   nameLab String @unique
-  localLab String
+  idLocal String?
+  local Location @relation(fields[idLocal], reference:[idLocal])
   createdAt DateTime @default(now())
   updateAt DateTime @updateAt
+  assets Assets[]
 }
 model Assets{
   idAssets Int @id @default(autoincrement())
-  idLocal
-  local
-  idLab
-  lab
+  idLab Int?
+  labFK Lab? @relation(fields:[idLab], reference: [idLab])
   modelo String
-  patrimonio Int @unique
-  categoria
-  serial
+  patrimony Int @unique
+  category String?
+  serial String?
 }
 model Location{
-  idLocal
+  idLocal Int @id @default(autoincrement())
+  name String
+  ParentId Int?
+  parent Location? @relation("LocationParent", fields: [parentId], reference:[idLocal])
+  children Location? @relation("LocationParent)
+  labs Lab[]
+  createdAt DateTime @default(now())
+  updateAt DateTime @updateAt
 }
+
 
