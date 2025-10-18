@@ -1,4 +1,3 @@
-
 generator client {
   provider = "prisma-client-js"
   output   = "../generated/prisma"
@@ -8,67 +7,178 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
-enum Role{
+
+enum Role {
   ADMIN
   TECH
   CONSULTA
 }
-enum AssetsStatus{
+
+enum AssetsStatus {
   AVAILABLE
   IN_USE
-  MAINTENENCE
+  MAINTENANCE @map("MAINTENENCE") // valor legado
   LOANED
 }
-enum EventType{
+
+enum EventType {
   MOVE
   STATUS_CHANGE
   CHECKIN
   CHECKOUT
   OTHER
 }
-enum MaintenanceStatus{
+
+enum MaintenanceStatus {
   OPEN
   IN_PROGRESS
   CLOSED
 }
 
-model User{
-  id Int @id @default(autoincrement())
-  nome String
-  senha String
-  email String @unique
-  role Role @default(CONSULTA)
-  events AssetsEvent[]                  
-  createdAt DateTime @default(now())
-  updateAt DateTime @updateAt               
-}
-model Lab{
-  idLab Int @id @default(autoincrement())
-  nameLab String @unique
-  idLocal String?
-  local Location @relation(fields[idLocal], reference:[idLocal])
-  createdAt DateTime @default(now())
-  updateAt DateTime @updateAt
-  assets Assets[]
-}
-model Assets{
-  idAssets Int @id @default(autoincrement())
-  idLab Int?
-  labFK Lab? @relation(fields:[idLab], reference: [idLab])
-  modelo String
-  patrimony Int @unique
-  category String?
-  serial String?
-}
-model Location{
-  idLocal Int @id @default(autoincrement())
-  name String
-  ParentId Int?
-  parent Location? @relation("LocationParent", fields: [parentId], reference:[idLocal])
-  children Location? @relation("LocationParent)
-  labs Lab[]
-  createdAt DateTime @default(now())
-  updateAt DateTime @updateAt
+model User {
+  idUser    Int           @id @default(autoincrement())
+  nome      String
+  senha     String
+  email     String        @unique
+  role      Role          @default(CONSULTA)
+  events    AssetsEvent[]
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt @map("updateAt") // coluna legada
 }
 
+model Location {
+  idLocal    Int           @id @default(autoincrement())
+  name       String
+  idParent   Int?
+  parent     Location?     @relation("LocationParent", fields: [idParent], references: [idLocal])
+  children   Location[]    @relation("LocationParent")
 
+  labs       Lab[]
+  eventsFrom AssetsEvent[] @relation("EventFromLocal")
+  eventsTo   AssetsEvent[] @relation("EventToLocal")
+  assets     Assets[]
+
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+}
+
+model Lab {
+  idLab       Int           @id @default(autoincrement())
+  nameLab     String        @unique
+  idLocal     Int?
+  local       Location?     @relation(fields: [idLocal], references: [idLocal])
+
+  eventsFrom  AssetsEvent[] @relation("EventFromLab")
+  eventsTo    AssetsEvent[] @relation("EventToLab")
+
+  assets      Assets[]
+  inventories Inventory[]
+
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([idLocal])
+}
+
+model Assets {
+  idAssets        Int              @id @default(autoincrement())
+  idLab           Int?
+  labFK           Lab?             @relation(fields: [idLab], references: [idLab], onDelete: SetNull, onUpdate: Cascade)
+  idLocal         Int?
+  local           Location?        @relation(fields: [idLocal], references: [idLocal], onDelete: SetNull, onUpdate: Cascade)
+
+  model           String?
+  patrimony       Int              @unique
+  category        String?
+  serial          String?
+  status          AssetsStatus     @default(AVAILABLE)
+
+  events          AssetsEvent[]
+  maintenance     Maintenance[]
+  inventoryItems  InventoryItem[]
+
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@index([idLab])
+  @@index([idLocal])
+  @@index([serial])
+  @@index([status])
+}
+
+model AssetsEvent {
+  idEvent     Int        @id @default(autoincrement())
+
+  idAssets    Int?       @map("IdAssets")   // coluna legada
+  assetFK     Assets?    @relation(fields: [idAssets], references: [idAssets])
+
+  idUser      Int?       @map("IdUser")     // coluna legada
+  userFK      User?      @relation(fields: [idUser], references: [idUser])
+
+  type        EventType
+
+  fromIdLab   Int?
+  fromLab     Lab?       @relation("EventFromLab", fields: [fromIdLab], references: [idLab], onDelete: SetNull, onUpdate: Cascade)
+  toIdLab     Int?
+  toLab       Lab?       @relation("EventToLab", fields: [toIdLab], references: [idLab], onDelete: SetNull, onUpdate: Cascade)
+
+  fromIdLocal Int?
+  fromLocal   Location?  @relation("EventFromLocal", fields: [fromIdLocal], references: [idLocal], onDelete: SetNull, onUpdate: Cascade)
+  toIdLocal   Int?
+  toLocal     Location?  @relation("EventToLocal", fields: [toIdLocal], references: [idLocal], onDelete: SetNull, onUpdate: Cascade)
+
+  note        String?
+  createdAt   DateTime   @default(now())
+
+  @@index([idAssets, createdAt])
+  @@index([type, createdAt])
+  @@index([fromIdLab])
+  @@index([toIdLab])
+  @@index([fromIdLocal])
+  @@index([toIdLocal])
+  @@index([idUser])
+}
+
+model Maintenance {
+  idMaintenance Int       @id @default(autoincrement()) @map("idMaintenence") // coluna legada
+  idAssets      Int                                       @map("idAssets")
+  assets        Assets    @relation(fields: [idAssets], references: [idAssets], onDelete: Cascade, onUpdate: Cascade)
+
+  description   String
+  openedBy      Int?
+  openedAt      DateTime  @default(now())
+  closedAt      DateTime?
+  status        MaintenanceStatus @default(OPEN)
+
+  @@index([idAssets, openedAt])
+  @@index([closedAt])
+
+  @@map("maintence") // tabela legada
+}
+
+model Inventory {
+  idInventory Int        @id @default(autoincrement())
+  idLab       Int
+  lab         Lab        @relation(fields: [idLab], references: [idLab], onDelete: Cascade, onUpdate: Cascade)
+  openedAt    DateTime   @default(now())
+  closedAt    DateTime?
+  items       InventoryItem[]
+
+  @@index([idLab, openedAt])
+  @@index([closedAt])
+}
+
+model InventoryItem {
+  idInventoryItem Int       @id @default(autoincrement()) @map("idIventoryItem") // coluna legada (typo)
+  idInventory     Int                                   @map("IdInventory")      // coluna legada
+  inventory       Inventory  @relation(fields: [idInventory], references: [idInventory], onDelete: Cascade, onUpdate: Cascade)
+
+  idAssets        Int
+  assets          Assets     @relation(fields: [idAssets], references: [idAssets], onDelete: Cascade, onUpdate: Cascade)
+
+  note            String?
+  scanned         Boolean    @default(false)
+
+  @@index([idInventory])
+  @@index([idAssets])
+}
