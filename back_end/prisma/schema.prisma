@@ -1,6 +1,5 @@
 generator client {
   provider = "prisma-client-js"
-  output   = "../generated/prisma"
 }
 
 datasource db {
@@ -17,7 +16,7 @@ enum Role {
 enum AssetsStatus {
   AVAILABLE
   IN_USE
-  MAINTENANCE @map("MAINTENENCE") // valor legado
+  MAINTENANCE @map("MAINTENENCE") 
   LOANED
 }
 
