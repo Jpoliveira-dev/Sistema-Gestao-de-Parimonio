@@ -54,5 +54,4 @@ export const authPlugin = fp(async (app) => {
     }
   });
 
-  // ❌ NÃO use app.decorateRequest('user', null)
 });
